@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Traube Tischreservierung</title>
-    <link rel="stylesheet" href="https://jsdelivr.net">
     <style>
         body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background-color: #f4f4f9; color: #333; }
         .container { max-width: 1200px; margin: 0 auto; display: grid; grid-template-columns: 1fr; gap: 20px; }
@@ -12,16 +11,26 @@
         .card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 15px; }
         h2 { margin-top: 0; color: #8b0000; border-bottom: 2px solid #8b0000; padding-bottom: 10px; }
         label { display: block; margin: 12px 0 5px; font-weight: bold; }
-        input, select, textarea { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-size: 16px; background-color: #fff; }
+        input, select, textarea { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-size: 16px; background-color: #fff; display: block; }
         button { background: #8b0000; color: white; border: none; padding: 14px 20px; border-radius: 4px; cursor: pointer; font-size: 16px; margin-top: 15px; width: 100%; font-weight: bold; }
         button:hover { background: #a00000; }
         .error { color: red; font-weight: bold; margin-top: 10px; display: none; padding: 10px; background: #fff3f3; border-radius: 4px; }
         .success { color: green; font-weight: bold; margin-top: 10px; display: none; padding: 10px; background: #e6f4ea; border-radius: 4px; }
         .admin-section { grid-column: 1 / -1; background: #fff3f3; border: 1px solid #deb887; }
-        .res-item { padding: 10px; border-bottom: 1px solid #eee; margin-bottom: 5px; background: #fafafa; border-radius: 4px; }
+        .res-item { padding: 12px; border-bottom: 1px solid #ddd; margin-bottom: 8px; background: #fafafa; border-radius: 4px; font-size: 15px; }
         .toggle-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 8px; margin-top: 10px; }
         .toggle-btn { background: #d1d1d6; padding: 14px 10px; font-size: 14px; font-weight: bold; color: #333; cursor: pointer; border: 1px solid #aeaeae; border-radius: 6px; text-align: center; width: 100%; box-sizing: border-box; }
         .toggle-btn.active { background: #34c759; color: white; border-color: #248a3d; }
+        
+        /* Neuer, eingebauter Monats-Wähler */
+        .month-select { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+        .day-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; text-align: center; }
+        .day-name { font-weight: bold; background: #eee; padding: 5px; border-radius: 4px; font-size: 14px; }
+        .day-cell { padding: 15px 5px; background: #e9ecef; border-radius: 4px; cursor: pointer; font-weight: bold; position: relative; min-height: 40px; box-sizing: border-box; }
+        .day-cell:hover { background: #dee2e6; }
+        .day-cell.selected { border: 2px solid #8b0000; background: #f8d7da; }
+        .day-cell.has-res { background: #d4edda; color: #155724; }
+        .day-cell.has-error { background: #f8d7da; color: #721c24; }
     </style>
 </head>
 <body>
@@ -49,15 +58,17 @@
         </div>
     </div>
 
-    <!-- RESERVIERUNGSFORMULAR -->
+    <!-- RESERVIERUNGSFORMULAR IN DEINER WUNSCH-REIHENFOLGE -->
     <div class="card">
         <h2>Tisch reservieren</h2>
         <form id="resForm" onsubmit="handleReserve(event)">
             <label>Wunschdatum *</label>
-            <input type="date" id="datum" onchange="updateUhrzeiten()" required>
+            <input type="date" id="datum" onchange="handleDateChange()" required>
 
             <label>Wunsch-Uhrzeit *</label>
-            <select id="uhrzeit" required></select>
+            <select id="uhrzeit" required>
+                <option value="">Bitte zuerst Datum wählen</option>
+            </select>
 
             <label>Wo möchten Sie sitzen? *</label>
             <select id="bereich" required></select>
@@ -86,62 +97,70 @@
         </form>
     </div>
 
-    <!-- KALENDER -->
+    <!-- MONATSKALENDER & SOFORT-LISTE -->
     <div class="card">
         <h2>Reservierungskalender</h2>
-        <div id="calendar"></div>
-        <div id="dayListSection" style="margin-top: 20px; display: none;">
-            <h3 id="selectedDateTitle" style="color: #8b0000; margin-bottom: 10px;"></h3>
+        
+        <div class="month-select">
+            <button type="button" onclick="changeMonth(-1)" style="width: auto; margin: 0; padding: 5px 15px;">&lt; Zurück</button>
+            <h3 id="monthTitle" style="margin: 0; color: #8b0000;"></h3>
+            <button type="button" onclick="changeMonth(1)" style="width: auto; margin: 0; padding: 5px 15px;">Vor &gt;</button>
+        </div>
+
+        <div class="day-grid">
+            <div class="day-name">Mo</div><div class="day-name">Di</div><div class="day-name">Mi</div>
+            <div class="day-name">Do</div><div class="day-name">Fr</div><div class="day-name">Sa</div><div class="day-name">So</div>
+        </div>
+        <div id="calendarDays" class="day-grid" style="margin-top: 5px;"></div>
+        
+        <div id="dayListSection" style="margin-top: 25px; border-top: 2px solid #8b0000; padding-top: 15px;">
+            <h3 id="selectedDateTitle" style="color: #8b0000; margin-bottom: 10px;">Reservierungen heute:</h3>
             <div id="dayReservations"></div>
         </div>
     </div>
 </div>
 
-<script src="https://jsdelivr.net"></script>
-<script src="https://jsdelivr.net"></script>
 <script>
+    // --- HIER SIND DEINE ANZAHL-LIMITS (Kannst du jederzeit ändern) ---
+    const MAX_GASTRAUM = 30;
+    const MAX_AUSSEN = 10;
+    const MAX_BIERGARTEN = 20;
+
     let reservierungen = JSON.parse(localStorage.getItem('traube_res')) || [];
     let config = JSON.parse(localStorage.getItem('traube_config')) || {
         days: { Monday: false, Tuesday: false, Wednesday: false, Thursday: true, Friday: true, Saturday: false, Sunday: true },
         areas: { Gastraum: true, Außenbereich: true, Biergarten: true },
-        limits: { Gastraum: 30, Außenbereich: 10, Biergarten: 20 }
+        limits: { Gastraum: MAX_GASTRAUM, Außenbereich: MAX_AUSSEN, Biergarten: MAX_BIERGARTEN }
     };
-    let calendar;
 
-    document.addEventListener('DOMContentLoaded', function() {
-        const calendarEl = document.getElementById('calendar');
-        calendar = new FullCalendar.Calendar(calendarEl, {
-            initialView: 'dayGridMonth',
-            locale: 'de',
-            headerToolbar: { left: 'prev,next today', center: 'title', right: '' },
-            events: getCalendarEvents(),
-            dateClick: function(info) { showDayList(info.dateStr); }
-        });
-        calendar.render();
+    let currentYear, currentMonth;
+    let selectedDateStr = new Date().toISOString().split('T')[0];
+
+    window.onload = function() {
+        let today = new Date();
+        currentYear = today.getFullYear();
+        currentMonth = today.getMonth();
         
         updateButtons();
         initBereiche();
-        updateUhrzeiten();
-    });
+        renderCalendar();
+        showDayList(selectedDateStr);
+    };
 
     function save() {
         localStorage.setItem('traube_res', JSON.stringify(reservierungen));
         localStorage.setItem('traube_config', JSON.stringify(config));
-        if(calendar) { calendar.removeAllEvents(); calendar.addEventSource(getCalendarEvents()); }
+        renderCalendar();
     }
 
     function toggleDay(day) {
         config.days[day] = !config.days[day];
-        updateButtons(); 
-        save(); 
-        updateUhrzeiten();
+        updateButtons(); save(); updateUhrzeiten();
     }
 
     function toggleArea(area) {
         config.areas[area] = !config.areas[area];
-        updateButtons(); 
-        save(); 
-        initBereiche();
+        updateButtons(); save(); initBereiche();
     }
 
     function updateButtons() {
@@ -165,41 +184,4 @@
         bSelect.innerHTML = '';
         ['Gastraum', 'Außenbereich', 'Biergarten'].forEach(a => {
             if(config.areas[a]) {
-                let opt = document.createElement('option');
-                opt.value = a; opt.innerText = `${a} (max. ${config.limits[a]} Pers.)`;
-                bSelect.appendChild(opt);
-            }
-        });
-    }
-
-    function updateUhrzeiten() {
-        const dateVal = document.getElementById('datum').value;
-        const uSelect = document.getElementById('uhrzeit');
-        uSelect.innerHTML = '';
-        
-        if(!dateVal) {
-            let opt = document.createElement('option');
-            opt.innerText = 'Bitte zuerst Datum wählen';
-            uSelect.appendChild(opt);
-            return;
-        }
-
-        const date = new Date(dateVal);
-        const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-        const wochentag = dayNames[date.getDay()];
-
-        if(!config.days[wochentag]) {
-            let opt = document.createElement('option');
-            opt.innerText = '❌ An diesem Tag geschlossen';
-            uSelect.appendChild(opt);
-            return;
-        }
-
-        let zeiten = [];
-        if(wochentag === 'Sunday') {
-            zeiten.push('11:00','11:15','11:30','11:45','12:00','12:15','12:30','12:45','13:00');
-        }
-        zeiten.push('17:00','17:15','17:30','17:45','18:00','18:15','18:30','18:45','19:00','19:15','19:30');
-
-        zeiten.forEach(z => {
-let opt = document.createElement('option');opt.value = z; opt.innerText = z + ' Uhr';uSelect.appendChild(opt);});}function getCalendarEvents() {let blocks = {};reservierungen.forEach(r => {let key = ${r.datum}_${r.bereich}_${r.uhrzeit};blocks[key] = (blocks[key] || 0) + parseInt(r.personen);});let events = [];reservierungen.forEach((r, index) => {let key = ${r.datum}_${r.bereich}_${r.uhrzeit};let sum = blocks[key];let max = config.limits[r.bereich];events.push({title: ${r.uhrzeit} - ${r.personen}P - ${r.nachname},start: r.datum,color: sum <= max ? '#28a745' : '#dc3545',extendedProps: { index: index }});});return events;}function showDayList(dateStr) {const section = document.getElementById('dayListSection');const title = document.getElementById('selectedDateTitle');const list = document.getElementById('dayReservations');let d = new Date(dateStr);title.innerText = Reservierungen am ${d.toLocaleDateString('de-DE', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}:;list.innerHTML = '';let tagRes = reservierungen.filter(r => r.datum === dateStr);tagRes.sort((a,b) => a.uhrzeit.localeCompare(b.uhrzeit));if(tagRes.length === 0) {list.innerHTML = 'Keine Reservierungen für diesen Tag vorhanden.';} else {tagRes.forEach(r => {let div = document.createElement('div');div.className = 'res-item';div.innerHTML = <strong>${r.uhrzeit} Uhr</strong> - ${r.personen} Personen (${r.bereich})<br>Gast: ${r.nachname}, ${r.vorname} | Tel: ${r.telefon}<br>${r.notizen ? '<em>Notiz: ' + r.notizen + '</em>' : ''};list.appendChild(div);});}section.style.display = 'block';}function handleReserve(e) {e.preventDefault();const err = document.getElementById('errorMsg');const succ = document.getElementById('successMsg');err.style.display = 'none'; succ.style.display = 'none';const datum = document.getElementById('datum').value;const uhrzeit = document.getElementById('uhrzeit').value;const bereich = document.getElementById('bereich').value;const personen = parseInt(document.getElementById('personen').value);if(uhrzeit.includes('geschlossen') || uhrzeit.includes('zuerst')) {err.innerText = '❌ An diesem Tag haben wir geschlossen!'; err.style.display = 'block'; return;}let belegt = 0;reservierungen.forEach(r => {if(r.datum === datum && r.bereich === bereich && r.uhrzeit === uhrzeit) { belegt += parseInt(r.personen); }});if((belegt + personen) > config.limits[bereich]) {err.innerText = ❌ Zu dieser Uhrzeit sind im ${bereich} leider keine Plätze mehr frei!; err.style.display = 'block'; return;}reservierungen.push({vorname: document.getElementById('vorname').value,nachname: document.getElementById('nachname').value,telefon: document.getElementById('telefon').value,email: document.getElementById('email').value,bereich: bereich, datum: datum, uhrzeit: uhrzeit, personen: personen,notizen: document.getElementById('notizen').value});save(); succ.style.display = 'block'; document.getElementById('resForm').reset(); initBereiche(); updateUhrzeiten(); showDayList(datum);}
+let opt = document.createElement('option');opt.value = a; opt.innerText = ${a} (max. ${config.limits[a]} Pers.);bSelect.appendChild(opt);}});}function handleDateChange() {selectedDateStr = document.getElementById('datum').value;updateUhrzeiten();renderCalendar();showDayList(selectedDateStr);}function updateUhrzeiten() {const dateVal = document.getElementById('datum').value;const uSelect = document.getElementById('uhrzeit');uSelect.innerHTML = '';if(!dateVal) {let opt = document.createElement('option');opt.innerText = 'Bitte zuerst Datum wählen';uSelect.appendChild(opt); return;}const date = new Date(dateVal);const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];const wochentag = dayNames[date.getDay()];if(!config.days[wochentag]) {let opt = document.createElement('option');opt.innerText = '❌ An diesem Tag geschlossen';uSelect.appendChild(opt); return;}let zeiten = [];if(wochentag === 'Sunday') {zeiten.push('11:00','11:15','11:30','11:45','12:00','12:15','12:30','12:45','13:00');}zeiten.push('17:00','17:15','17:30','17:45','18:00','18:15','18:30','18:45','19:00','19:15','19:30');zeiten.forEach(z => {let opt = document.createElement('option');opt.value = z; opt.innerText = z + ' Uhr';uSelect.appendChild(opt);});}function renderCalendar() {const container = document.getElementById('calendarDays');container.innerHTML = '';const monate = ["Januar","Februar","März","April","Mai","Juni","Juli","August","September","Oktober","November","Dezember"];document.getElementById('monthTitle').innerText = monate[currentMonth] + " " + currentYear;let firstDay = new Date(currentYear, currentMonth, 1).getDay();let adjFirstDay = firstDay === 0 ? 6 : firstDay - 1; // Montag=0 bis Sonntag=6let daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();// Leere Zellen für den Vormonatfor (let i = 0; i < adjFirstDay; i++) {let empty = document.createElement('div');container.appendChild(empty);}// Tage des aktuellen Monats befüllenfor (let day = 1; day <= daysInMonth; day++) {let cell = document.createElement('div');cell.className = 'day-cell';cell.innerText = day;let mStr = String(currentMonth + 1).padStart(2, '0');let dStr = String(day).padStart(2, '0');let fullDateStr = ${currentYear}-${mStr}-${dStr};// Prüfen ob Buchungen an diesem Tag existierenlet tagRes = reservierungen.filter(r => r.datum === fullDateStr);if(tagRes.length > 0) {cell.classList.add('has-res');cell.innerText = day +  (${tagRes.length});}if(fullDateStr === selectedDateStr) {cell.classList.add('selected');}cell.onclick = function() {selectedDateStr = fullDateStr;document.getElementById('datum').value = fullDateStr;updateUhrzeiten();renderCalendar();showDayList(fullDateStr);};container.appendChild(cell);}}function changeMonth(dir) {currentMonth += dir;if(currentMonth < 0) { currentMonth = 11; currentYear--; }if(currentMonth > 11) { currentMonth = 0; currentYear++; }renderCalendar();}function showDayList(dateStr) {const title = document.getElementById('selectedDateTitle');const list = document.getElementById('dayReservations');let d = new Date(dateStr);title.innerText = Reservierungen am ${d.toLocaleDateString('de-DE', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}:;list.innerHTML = '';let tagRes = reservierungen.filter(r => r.datum === dateStr);tagRes.sort((a,b) => a.uhrzeit.localeCompare(b.uhrzeit));if(tagRes.length === 0) {list.innerHTML = 'Keine Reservierungen für diesen Tag vorhanden.';} else {tagRes.forEach(r => {let div = document.createElement('div');div.className = 'res-item';div.innerHTML = <strong>${r.uhrzeit} Uhr</strong> - <strong>${r.personen} Personen</strong> (${r.bereich})<br> Gast: <strong>${r.nachname}, ${r.vorname}</strong> | Tel: ${r.telefon} ${r.email ? '| Mail: '+r.email : ''}<br> ${r.notizen ? '<em>Notiz: ' + r.notizen + '</em>' : ''};list.appendChild(div);});}}function handleReserve(e) {e.preventDefault();const err = document.getElementById('errorMsg');const succ = document.getElementById('successMsg');err.style.display = 'none'; succ.style.display = 'none';const datum = document.getElementById('datum').value;const uhrzeit = document.getElementById('uhrzeit').value;const bereich = document.getElementById('bereich').value;const personen = parseInt(document.getElementById('personen').value);if(!uhrzeit || uhrzeit.includes('geschlossen') || uhrzeit.includes('zuerst')) {err.innerText = '❌ An diesem Tag haben wir geschlossen!'; err.style.display = 'block'; return;}// Live-Kapazitätsprüfunglet belegt = 0;reservierungen.forEach(r => {if(r.datum === datum && r.bereich === bereich && r.uhrzeit === uhrzeit) { belegt += parseInt(r.personen); }});if((belegt + personen) > config.limits[bereich]) {err.innerText = ❌ Zu dieser Uhrzeit sind im ${bereich} leider keine Plätze mehr frei!; err.style.display = 'block'; return;}reservierungen.push({vorname: document.getElementById('vorname').value,nachname: document.getElementById('nachname').value,telefon: document.getElementById('telefon').value,email: document.getElementById('email').value,bereich: bereich, datum: datum, uhrzeit: uhrzeit, personen: personen,notizen: document.getElementById('notizen').value});save();succ.style.display = 'block';document.getElementById('resForm').reset();initBereiche();updateUhrzeiten();showDayList(datum);}
