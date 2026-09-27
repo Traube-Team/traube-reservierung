@@ -19,57 +19,69 @@
         .success { color: green; font-weight: bold; margin-top: 10px; display: none; }
         .admin-section { grid-column: 1 / -1; background: #fff3f3; border: 1px solid #deb887; }
         .res-item { padding: 10px; border-bottom: 1px solid #eee; margin-bottom: 5px; background: #fafafa; border-radius: 4px; }
-        .toggle-btn { background: #555; padding: 6px 12px; font-size: 12px; width: auto; margin-right: 5px; border-radius: 4px; color: white; cursor: pointer; border: none; }
+        .toggle-btn { background: #555; padding: 8px 14px; font-size: 13px; font-weight: bold; color: white; cursor: pointer; border: none; border-radius: 4px; margin: 3px; }
         .toggle-btn.active { background: green; }
     </style>
 </head>
 <body>
 
 <div class="container">
+    <!-- ADMIN PANEL -->
     <div class="card admin-section">
         <h2>Traube Admin-Panel (Theke)</h2>
         <p><strong>Wochentage manuell steuern (Klicken zum Umschalten):</strong></p>
-        <button class="toggle-btn" id="btn-Mon" onclick="toggleDay('Monday')">Montag (Zu)</button>
-        <button class="toggle-btn" id="btn-Tue" onclick="toggleDay('Tuesday')">Dienstag (Zu)</button>
-        <button class="toggle-btn" id="btn-Wed" onclick="toggleDay('Wednesday')">Mittwoch (Zu)</button>
-        <button class="toggle-btn active" id="btn-Thu" onclick="toggleDay('Thursday')">Donnerstag (Offen)</button>
-        <button class="toggle-btn active" id="btn-Fri" onclick="toggleDay('Friday')">Freitag (Offen)</button>
-        <button class="toggle-btn" id="btn-Sat" onclick="toggleDay('Saturday')">Samstag (Zu)</button>
-        <button class="toggle-btn active" id="btn-Sun" onclick="toggleDay('Sunday')">Sonntag (Offen)</button>
+        <button class="toggle-btn" id="btn-Mon" onclick="toggleDay('Monday')">Montag</button>
+        <button class="toggle-btn" id="btn-Tue" onclick="toggleDay('Tuesday')">Dienstag</button>
+        <button class="toggle-btn" id="btn-Wed" onclick="toggleDay('Wednesday')">Mittwoch</button>
+        <button class="toggle-btn" id="btn-Thu" onclick="toggleDay('Thursday')">Donnerstag</button>
+        <button class="toggle-btn" id="btn-Fri" onclick="toggleDay('Friday')">Freitag</button>
+        <button class="toggle-btn" id="btn-Sat" onclick="toggleDay('Saturday')">Samstag</button>
+        <button class="toggle-btn" id="btn-Sun" onclick="toggleDay('Sunday')">Sonntag</button>
         
         <p style="margin-top: 15px;"><strong>Bereiche manuell steuern:</strong></p>
-        <button class="toggle-btn active" id="btn-gastraum" onclick="toggleArea('Gastraum')">Gastraum (Offen)</button>
-        <button class="toggle-btn active" id="btn-aussen" onclick="toggleArea('Außenbereich')">Außenbereich (Offen)</button>
-        <button class="toggle-btn active" id="btn-biergarten" onclick="toggleArea('Biergarten')">Biergarten (Offen)</button>
+        <button class="toggle-btn" id="btn-gastraum" onclick="toggleArea('Gastraum')">Gastraum</button>
+        <button class="toggle-btn" id="btn-aussen" onclick="toggleArea('Außenbereich')">Außenbereich</button>
+        <button class="toggle-btn" id="btn-biergarten" onclick="toggleArea('Biergarten')">Biergarten</button>
     </div>
 
+    <!-- RESERVIERUNGSFORMULAR IN RICHTIGER REIHENFOLGE -->
     <div class="card">
         <h2>Tisch reservieren</h2>
         <form id="resForm" onsubmit="handleReserve(event)">
-            <label>Vorname *</label>
-            <input type="text" id="vorname" required>
-            <label>Nachname *</label>
-            <input type="text" id="nachname" required>
-            <label>Telefonnummer *</label>
-            <input type="tel" id="telefon" required>
-            <label>E-Mail-Adresse (Optional)</label>
-            <input type="email" id="email">
-            <label>Wo möchten Sie sitzen? *</label>
-            <select id="bereich" onchange="updateUhrzeiten()"></select>
             <label>Wunschdatum *</label>
             <input type="date" id="datum" onchange="updateUhrzeiten()" required>
+
             <label>Wunsch-Uhrzeit *</label>
             <select id="uhrzeit" required></select>
+
+            <label>Wo möchten Sie sitzen? *</label>
+            <select id="bereich" required></select>
+
             <label>Personenzahl *</label>
             <input type="number" id="personen" min="1" required>
+
+            <label>Nachname *</label>
+            <input type="text" id="nachname" required>
+
+            <label>Vorname *</label>
+            <input type="text" id="vorname" required>
+
+            <label>Telefonnummer *</label>
+            <input type="tel" id="telefon" required>
+
+            <label>E-Mail-Adresse (Optional)</label>
+            <input type="email" id="email">
+
             <label>Besondere Wünsche oder Notizen (Optional)</label>
             <textarea id="notizen" rows="3"></textarea>
+
             <button type="submit">Jetzt Tisch reservieren</button>
             <div id="errorMsg" class="error"></div>
             <div id="successMsg" class="success">Vielen Dank für Ihre Reservierung!</div>
         </form>
     </div>
 
+    <!-- KALENDER -->
     <div class="card">
         <h2>Reservierungskalender</h2>
         <div id="calendar"></div>
@@ -101,8 +113,9 @@
             dateClick: function(info) { showDayList(info.dateStr); }
         });
         calendar.render();
-        initForm();
         updateButtons();
+        initBereiche();
+        updateUhrzeiten();
     });
 
     function save() {
@@ -113,12 +126,12 @@
 
     function toggleDay(day) {
         config.days[day] = !config.days[day];
-        updateButtons(); save(); initForm();
+        updateButtons(); save(); updateUhrzeiten();
     }
 
     function toggleArea(area) {
         config.areas[area] = !config.areas[area];
-        updateButtons(); save(); initForm();
+        updateButtons(); save(); initBereiche();
     }
 
     function updateButtons() {
@@ -137,8 +150,9 @@
         });
     }
 
-    function initForm() {
+    function initBereiche() {
         const bSelect = document.getElementById('bereich');
+        const currentVal = bSelect.value;
         bSelect.innerHTML = '';
         ['Gastraum', 'Außenbereich', 'Biergarten'].forEach(a => {
             if(config.areas[a]) {
@@ -147,14 +161,22 @@
                 bSelect.appendChild(opt);
             }
         });
-        updateUhrzeiten();
+        if(currentVal && [...bSelect.options].some(o => o.value === currentVal)) {
+            bSelect.value = currentVal;
+        }
     }
 
     function updateUhrzeiten() {
         const dateVal = document.getElementById('datum').value;
         const uSelect = document.getElementById('uhrzeit');
         uSelect.innerHTML = '';
-        if(!dateVal) return;
+        
+        if(!dateVal) {
+            let opt = document.createElement('option');
+            opt.innerText = 'Bitte zuerst Datum wählen';
+            uSelect.appendChild(opt);
+            return;
+        }
 
         const date = new Date(dateVal);
         const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
@@ -163,7 +185,8 @@
         if(!config.days[wochentag]) {
             let opt = document.createElement('option');
             opt.innerText = '❌ An diesem Tag geschlossen';
-            uSelect.appendChild(opt); return;
+            uSelect.appendChild(opt);
+            return;
         }
 
         let zeiten = [];
@@ -188,14 +211,4 @@
         let events = [];
         reservierungen.forEach((r, index) => {
             let key = `${r.datum}_${r.bereich}_${r.uhrzeit}`;
-            let sum = blocks[key];
-            let max = config.limits[r.bereich];
-            let isOk = sum <= max;
-            events.push({
-                title: `${r.uhrzeit} - ${r.personen}P - ${r.nachname}`,
-                start: r.datum,
-                color: isOk ? '#28a745' : '#dc3545',
-                extendedProps: { index: index }
-            });
-        });
-return events;}function showDayList(dateStr) {const section = document.getElementById('dayListSection');const title = document.getElementById('selectedDateTitle');const list = document.getElementById('dayReservations');let d = new Date(dateStr);title.innerText = Reservierungen am ${d.toLocaleDateString('de-DE', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}:;list.innerHTML = '';let tagRes = reservierungen.filter(r => r.datum === dateStr);tagRes.sort((a,b) => a.uhrzeit.localeCompare(b.uhrzeit));if(tagRes.length === 0) {list.innerHTML = 'Keine Reservierungen für diesen Tag vorhanden.';} else {tagRes.forEach(r => {let div = document.createElement('div');div.className = 'res-item';div.innerHTML = <strong>${r.uhrzeit} Uhr</strong> - ${r.personen} Personen (${r.bereich})<br>Gast: ${r.nachname}, ${r.vorname} | Tel: ${r.telefon}<br>${r.notizen ? '<em>Notiz: ' + r.notizen + '</em>' : ''};list.appendChild(div);});}section.style.display = 'block';}function handleReserve(e) {e.preventDefault();const err = document.getElementById('errorMsg');const succ = document.getElementById('successMsg');err.style.display = 'none'; succ.style.display = 'none';const datum = document.getElementById('datum').value;const uhrzeit = document.getElementById('uhrzeit').value;const bereich = document.getElementById('bereich').value;const personen = parseInt(document.getElementById('personen').value);if(uhrzeit.includes('geschlossen')) {err.innerText = '❌ An diesem Tag haben wir geschlossen!'; err.style.display = 'block'; return;}let belegt = 0;reservierungen.forEach(r => {if(r.datum === datum && r.bereich === bereich && r.uhrzeit === uhrzeit) { belegt += parseInt(r.personen); }});if((belegt + personen) > config.limits[bereich]) {err.innerText = ❌ Zu dieser Uhrzeit sind im ${bereich} leider keine Plätze mehr frei!; err.style.display = 'block'; return;}reservierungen.push({vorname: document.getElementById('vorname').value,nachname: document.getElementById('nachname').value,telefon: document.getElementById('telefon').value,email: document.getElementById('email').value,bereich: bereich, datum: datum, uhrzeit: uhrzeit, personen: personen,notizen: document.getElementById('notizen').value});save(); succ.style.display = 'block'; document.getElementById('resForm').reset(); initForm(); showDayList(datum);}
+let sum = blocks[key];let max = config.limits[r.bereich];events.push({title: ${r.uhrzeit} - ${r.personen}P - ${r.nachname},start: r.datum,color: sum <= max ? '#28a745' : '#dc3545',extendedProps: { index: index }});});return events;}function showDayList(dateStr) {const section = document.getElementById('dayListSection');const title = document.getElementById('selectedDateTitle');const list = document.getElementById('dayReservations');let d = new Date(dateStr);title.innerText = Reservierungen am ${d.toLocaleDateString('de-DE', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}:;list.innerHTML = '';let tagRes = reservierungen.filter(r => r.datum === dateStr);tagRes.sort((a,b) => a.uhrzeit.localeCompare(b.uhrzeit));if(tagRes.length === 0) {list.innerHTML = 'Keine Reservierungen für diesen Tag vorhanden.';} else {tagRes.forEach(r => {let div = document.createElement('div');div.className = 'res-item';div.innerHTML = <strong>${r.uhrzeit} Uhr</strong> - ${r.personen} Personen (${r.bereich})<br>Gast: ${r.nachname}, ${r.vorname} | Tel: ${r.telefon}<br>${r.notizen ? '<em>Notiz: ' + r.notizen + '</em>' : ''};list.appendChild(div);});}section.style.display = 'block';}function handleReserve(e) {e.preventDefault();const err = document.getElementById('errorMsg');const succ = document.getElementById('successMsg');err.style.display = 'none'; succ.style.display = 'none';const datum = document.getElementById('datum').value;const uhrzeit = document.getElementById('uhrzeit').value;const bereich = document.getElementById('bereich').value;const personen = parseInt(document.getElementById('personen').value);if(uhrzeit.includes('geschlossen') || uhrzeit.includes('zuerst')) {err.innerText = '❌ An diesem Tag haben wir geschlossen!'; err.style.display = 'block'; return;}let belegt = 0;reservierungen.forEach(r => {if(r.datum === datum && r.bereich === bereich && r.uhrzeit === uhrzeit) { belegt += parseInt(r.personen); }});if((belegt + personen) > config.limits[bereich]) {err.innerText = ❌ Zu dieser Uhrzeit sind im ${bereich} leider keine Plätze mehr frei!; err.style.display = 'block'; return;}reservierungen.push({vorname: document.getElementById('vorname').value,nachname: document.getElementById('nachname').value,telefon: document.getElementById('telefon').value,email: document.getElementById('email').value,bereich: bereich, datum: datum, uhrzeit: uhrzeit, personen: personen,notizen: document.getElementById('notizen').value});save(); succ.style.display = 'block'; document.getElementById('resForm').reset(); initBereiche(); updateUhrzeiten(); showDayList(datum);}
